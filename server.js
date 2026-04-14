@@ -2,9 +2,9 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
-//const sendEmail = require("./email");
-//const nodemailer = require("nodemailer");
-//const Razorpay = require("razorpay");
+const sendEmail = require("./email");
+const nodemailer = require("nodemailer");
+const Razorpay = require("razorpay");
 const PDFDocument = require("pdfkit");
 
 // Load environment variables
@@ -156,36 +156,24 @@ transporter.verify((error, success) => {
 });
 
 
-// ✅ ADD THIS BELOW 👇 (IMPORTANT)
-async function sendEmail(to) {
-  try {
-    const info = await transporter.sendMail({
-      from: '"UA Electronics" <rikon@uaelectronicsindia.com>',
-      to: to,
-      subject: "Order Confirmed ✅",
-      html: "<h2>Your order has been placed successfully!</h2>"
-    });
 
-    console.log("Email sent:", info.response);
-  } catch (error) {
-    console.log("❌ Email error:", error);
-  }
-}
-
-// ✅ Export function
-module.exports = sendEmail;
 
 /* ===============================
-   💳 RAZORPAY SETUP
+   💳 RAZORPAY SETUP (OPTIONAL)
    =============================== */
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_xxxxxxxx",
-  key_secret: process.env.RAZORPAY_KEY_SECRET || "xxxxxxxx"
-});
+let razorpay = null;
 
-console.log("💳 Razorpay configured (Test Mode)");
-if (process.env.NODE_ENV === 'production') {
-  console.log("⚠️ Make sure to use LIVE Razorpay keys in production!");
+if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+  razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+  });
+  console.log("✅ Razorpay configured successfully!");
+  if (process.env.NODE_ENV === 'production') {
+    console.log("⚠️ Make sure to use LIVE Razorpay keys in production!");
+  }
+} else {
+  console.log("⚠️ Razorpay keys not configured. Online payments disabled. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to enable.");
 }
 
 /* ===============================
@@ -489,6 +477,14 @@ app.get("/track/:id", (req, res) => {
    =============================== */
 app.post("/create-order", async (req, res) => {
   try {
+    if (!razorpay) {
+      return res.status(503).json({ 
+        error: "Online payment service unavailable", 
+        details: "Razorpay keys not configured. Please check server configuration.",
+        suggestion: "Please use Cash on Delivery for orders or contact support."
+      });
+    }
+
     const { amount, currency = "INR", orderId } = req.body;
 
     if (!amount) {
@@ -705,5 +701,11 @@ app.post("/generate-pdf", (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log("\n" + "=".repeat(50));
+  console.log("🚀 UA ELECTRONICS SERVER STARTED");
+  console.log("=".repeat(50));
+  console.log(`📱 Server running on port: ${PORT}`);
+  console.log(`📧 Email: ${process.env.GMAIL_USER ? "✅ Configured" : "❌ Not configured"}`);
+  console.log(`💳 Razorpay: ${razorpay ? "✅ Configured" : "❌ Not configured (Online payments disabled)"}`);
+  console.log("=".repeat(50) + "\n");
 });
