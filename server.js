@@ -2,9 +2,9 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
-const nodemailer = require("nodemailer");
-const sendEmail = require("./email");
-const Razorpay = require("razorpay");
+//const sendEmail = require("./email");
+//const nodemailer = require("nodemailer");
+//const Razorpay = require("razorpay");
 const PDFDocument = require("pdfkit");
 
 // Load environment variables
